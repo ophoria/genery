@@ -33,6 +33,7 @@ export const ThumbnailCard: React.FC<ThumbnailCardProps> = ({
   onDoubleClick,
 }) => (
   <article
+    data-image-id={image.id}
     className={`proof-card ${isFocused ? 'is-focused' : ''} ${isSelected ? 'is-selected' : ''}`}
     onClick={(event) => {
       if (event.shiftKey) onRangeSelection(event.metaKey || event.ctrlKey);

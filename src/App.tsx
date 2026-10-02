@@ -107,6 +107,34 @@ export default function App() {
   const [gridColumns, setGridColumns] = useState(1);
 
   const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
+  const [isWindowFullscreen, setIsWindowFullscreen] = useState(Boolean(document.fullscreenElement));
+  const fullscreenPending = useRef(false);
+
+  useEffect(() => {
+    const syncFullscreen = () => setIsWindowFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', syncFullscreen);
+    return () => document.removeEventListener('fullscreenchange', syncFullscreen);
+  }, []);
+
+  const toggleWindowFullscreen = useCallback(async () => {
+    if (fullscreenPending.current) return;
+    fullscreenPending.current = true;
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else {
+        await document.documentElement.requestFullscreen();
+        // The toolbar disappears; don't leave keyboard focus on a hidden control.
+        if (document.activeElement instanceof HTMLElement && document.activeElement.closest('.gallery-toolbar')) {
+          document.activeElement.blur();
+        }
+      }
+    } catch (error) {
+      setNotice(getErrorMessage(error, 'Fullscreen could not be changed. Please try again.'));
+    } finally {
+      fullscreenPending.current = false;
+    }
+  }, []);
   const [isHashtagModalOpen, setIsHashtagModalOpen] = useState(false);
   const [isCommentModalOpen, setIsCommentModalOpen] = useState(false);
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
@@ -302,12 +330,11 @@ export default function App() {
     const handleGlobalKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'f') {
         event.preventDefault();
-        document.querySelector<HTMLInputElement>('[aria-label="Search images"]')?.focus();
+        if (!isWindowFullscreen) document.querySelector<HTMLInputElement>('[aria-label="Search images"]')?.focus();
         return;
       }
 
       if (
-        isFullscreenOpen ||
         isHashtagModalOpen ||
         isCommentModalOpen ||
         isBatchModalOpen ||
@@ -317,13 +344,30 @@ export default function App() {
 
       const target = event.target as HTMLElement;
       if (target.closest('input, textarea, select, a, [contenteditable="true"]')) return;
+      if (event.key.toLowerCase() === 'f' && !event.metaKey && !event.ctrlKey && !event.altKey) {
+        event.preventDefault();
+        if (!event.repeat) void toggleWindowFullscreen();
+        return;
+      }
+      if (event.key === 'Escape' && isWindowFullscreen && !isFullscreenOpen) {
+        event.preventDefault();
+        if (!event.repeat) void toggleWindowFullscreen();
+        return;
+      }
+      if (isFullscreenOpen) return;
       const isRatingKey = ['1', '2', '3', '4', '5'].includes(event.key)
         && !event.metaKey && !event.ctrlKey && !event.altKey;
       // Selection checkboxes retain button focus after clicking; rating shortcuts still apply there.
       if (target.closest('button') && !(isRatingKey && target.closest('.selection-check'))) return;
       if (isRatingKey) {
         event.preventDefault();
-        if (!event.repeat) void handleRateSelection(Number(event.key));
+        if (!event.repeat) {
+          // Resolve hover at keypress time so scrolling/filtering cannot leave a stale target.
+          const hoveredId = document.querySelector<HTMLElement>('.gallery-grid .proof-card:hover')?.dataset.imageId;
+          const hoveredImage = processedImages.find((image) => image.id === hoveredId);
+          if (hoveredImage) void rateImages([hoveredImage], Number(event.key));
+          else void handleRateSelection(Number(event.key));
+        }
         return;
       }
       if (processedImages.length === 0) return;
@@ -362,10 +406,13 @@ export default function App() {
     isCommentModalOpen,
     isFolderPickerOpen,
     isFullscreenOpen,
+    isWindowFullscreen,
+    toggleWindowFullscreen,
     isHashtagModalOpen,
     isShortcutsModalOpen,
     moveFocus,
-    processedImages.length,
+    processedImages,
+    rateImages,
   ]);
 
   const resetFilters = () => {
@@ -377,7 +424,7 @@ export default function App() {
   };
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${isWindowFullscreen ? ' is-window-fullscreen' : ''}`}>
       <GalleryHeader
         directoryPath={directoryPath}
         searchQuery={searchQuery}
@@ -393,6 +440,7 @@ export default function App() {
         onToggleInspector={() => setIsInspectorOpen((open) => !open)}
         onOpenBatchModal={() => setIsBatchModalOpen(true)}
         onOpenShortcutsModal={() => setIsShortcutsModalOpen(true)}
+        onToggleFullscreen={() => void toggleWindowFullscreen()}
       />
 
       <div className="workspace">

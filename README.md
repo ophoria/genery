@@ -24,14 +24,15 @@ An advanced, high-performance image gallery application written in **TypeScript*
 ### ⌨️ 3. Keyboard & Mouse Controls
 - **Arrow Keys (`Up`, `Down`, `Left`, `Right`)**: Navigate thumbnail selection grid smoothly.
 - **Scroll Wheel**: Scroll gallery grid effortlessly.
-- **`1` – `5`**: Rate all selected images (1 to 5 stars), or the highlighted image when nothing is selected. Bulk-rating notifications show the saved count and rating.
+- **`1` – `5`**: Rate the image under the mouse pointer (1 to 5 stars). When no thumbnail is hovered, rate all selected images, or the highlighted image when nothing is selected. Bulk-rating notifications show the saved count and rating.
 - **`Enter`**: Open the **Hashtag Box** to add/edit hashtags for the highlighted image.
 - **`Shift + Enter`**: Open the **Comment Box** to add/edit notes/comments for the highlighted image.
-- **`Space`**: Open the image in **Fullscreen Mode** (AR 1:1 container view).
-- **In Fullscreen Mode**:
+- **`F` / Green maximize button**: Toggle screen fullscreen without changing views. In thumbnail mode, hide the toolbar, side panels, filters, appearance controls, and status bar so only the gallery remains. Press **F** or **Esc** to restore the workspace.
+- **`Space`**: Open the image in **Quick Look** (AR 1:1 container view).
+- **In Quick Look**:
   - **`Left` / `Right` Arrow Keys**: Go to previous or next image.
   - **Clicking Left / Right Overlay Zones**: Navigate to previous or next image.
-  - **`F` Key**: Toggle between **100% Real Size** (actual pixel rendering) and **Fit View**.
+  - **`Z` Key**: Toggle between **100% Real Size** (actual pixel rendering) and **Fit View**.
   - **`ESC` Key**: Exit fullscreen mode or close any modal dialog back to the gallery.
 
 ### 📦 4. Bulk File Operations (Copy / Delete / Rename / Zip)

@@ -151,6 +151,19 @@ button:disabled {
 .traffic-light.is-close { background: #ff5f57; }
 .traffic-light.is-minimize { background: #febc2e; }
 .traffic-light.is-zoom { background: #28c840; }
+.traffic-light.is-zoom { padding: 0; border: 0; cursor: pointer; }
+
+/* Keep the grid mounted so fullscreen preserves selection and scroll position. */
+.app-shell.is-window-fullscreen .gallery-toolbar,
+.app-shell.is-window-fullscreen .source-sidebar,
+.app-shell.is-window-fullscreen .inspector-panel,
+.app-shell.is-window-fullscreen .thumbnail-controls,
+.app-shell.is-window-fullscreen .workspace-statusbar,
+.app-shell.is-window-fullscreen .filter-overlay,
+.app-shell.is-window-fullscreen .notice-banner,
+.app-shell.is-window-fullscreen .toast-region {
+  display: none;
+}
 
 .path-control,
 .toolbar-search {

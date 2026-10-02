@@ -28,7 +28,7 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
     { key: '⌘ / Ctrl + Shift + Click', desc: 'Add a range to the current selection' },
     { key: '⌘ / Ctrl + Click', desc: 'Add or remove an image from the bulk selection' },
     { key: 'Image checkbox', desc: 'Toggle selection; then open Batch for bulk actions' },
-    { key: '1 - 5', desc: 'Rate selected images; if none, rate the highlighted image' },
+    { key: '1 - 5', desc: 'Rate the hovered image; otherwise selected or highlighted images' },
     { key: 'Enter', desc: 'Open Hashtag editor for highlighted image' },
     { key: 'Shift + Enter', desc: 'Open Comment editor for highlighted image' },
     { key: 'Space', desc: 'Open Fullscreen viewer mode (Aspect Ratio 1:1 fit view)' },
@@ -36,7 +36,8 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
     { key: 'Scroll Wheel', desc: 'Scroll gallery & navigate thumbnails smoothly' },
     { key: 'Left / Right', desc: 'In Fullscreen: Navigate previous / next image' },
     { key: 'Click Image Sides', desc: 'In Fullscreen: Click left or right edge to go prev/next' },
-    { key: 'F', desc: 'In Fullscreen: Toggle Real Size 100% pixels vs Fit to screen' },
+    { key: 'F / Green button', desc: 'Toggle screen fullscreen; gallery shows only thumbnails' },
+    { key: 'Z', desc: 'In Quick Look: Toggle Real Size 100% pixels vs Fit to screen' },
     { key: 'ESC', desc: 'Exit Fullscreen / Close modal dialogs / Back to gallery anywhere' },
   ];
 

@@ -27,6 +27,7 @@ interface GalleryHeaderProps {
   onToggleInspector: () => void;
   onOpenBatchModal: () => void;
   onOpenShortcutsModal: () => void;
+  onToggleFullscreen: () => void;
 }
 
 export const GalleryHeader: React.FC<GalleryHeaderProps> = ({
@@ -44,6 +45,7 @@ export const GalleryHeader: React.FC<GalleryHeaderProps> = ({
   onToggleInspector,
   onOpenBatchModal,
   onOpenShortcutsModal,
+  onToggleFullscreen,
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -59,10 +61,10 @@ export const GalleryHeader: React.FC<GalleryHeaderProps> = ({
   return (
   <header className="gallery-toolbar">
     <div className="window-identity">
-      <div className="traffic-lights" aria-hidden="true">
-        <span className="traffic-light is-close" />
-        <span className="traffic-light is-minimize" />
-        <span className="traffic-light is-zoom" />
+      <div className="traffic-lights">
+        <span className="traffic-light is-close" aria-hidden="true" />
+        <span className="traffic-light is-minimize" aria-hidden="true" />
+        <button className="traffic-light is-zoom" type="button" aria-label="Enter fullscreen" title="Enter fullscreen (F)" onClick={onToggleFullscreen} />
       </div>
       <strong>Genery</strong>
     </div>

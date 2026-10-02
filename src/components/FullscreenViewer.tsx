@@ -45,7 +45,7 @@ export const FullscreenViewer: React.FC<FullscreenViewerProps> = ({
   const [isRealSize, setIsRealSize] = useState<boolean>(false);
   const dialogRef = useDialogFocus<HTMLDivElement>(true);
 
-  // Key event listeners for F, Left, Right, Esc inside Fullscreen
+  // F is handled by the app's fullscreen toggle; Z controls image zoom.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!shortcutsEnabled) return;
@@ -63,9 +63,9 @@ export const FullscreenViewer: React.FC<FullscreenViewerProps> = ({
       } else if (e.key === 'ArrowRight') {
         e.preventDefault();
         onNext();
-      } else if (e.key === 'f' || e.key === 'F') {
+      } else if ((e.key === 'z' || e.key === 'Z') && !e.metaKey && !e.ctrlKey && !e.altKey) {
         e.preventDefault();
-        setIsRealSize((prev) => !prev);
+        if (!e.repeat) setIsRealSize((prev) => !prev);
       } else if (['1', '2', '3', '4', '5'].includes(e.key)) {
         e.preventDefault();
         onRate(parseInt(e.key, 10));
@@ -117,7 +117,7 @@ export const FullscreenViewer: React.FC<FullscreenViewerProps> = ({
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
-          {/* Real Size Toggle (F key) */}
+          {/* Real Size Toggle (Z key) */}
           <button
             onClick={() => setIsRealSize(!isRealSize)}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded transition-colors border ${
@@ -125,10 +125,10 @@ export const FullscreenViewer: React.FC<FullscreenViewerProps> = ({
                 ? 'bg-blue-600 text-white border-blue-500'
                 : 'bg-dark-800 text-gray-300 hover:bg-dark-700 border-dark-600'
             }`}
-            title="Toggle Real Size 100% (HotKey: F)"
+            title="Toggle Real Size 100% (HotKey: Z)"
           >
             {isRealSize ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
-            <span>{isRealSize ? '100% Real Size' : 'Fit View'} (F)</span>
+            <span>{isRealSize ? '100% Real Size' : 'Fit View'} (Z)</span>
           </button>
 
           {/* Close button (Esc) */}
