@@ -36,6 +36,8 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
     { key: 'Scroll Wheel', desc: 'Scroll gallery & navigate thumbnails smoothly' },
     { key: 'Left / Right', desc: 'In Fullscreen: Navigate previous / next image' },
     { key: 'Click Image Sides', desc: 'In Fullscreen: Click left or right edge to go prev/next' },
+    { key: 'Ctrl + F', desc: 'Toggle gallery fullscreen within the current app window' },
+    { key: '⌘ + F', desc: 'Focus image search' },
     { key: 'F / Green button', desc: 'Toggle screen fullscreen; gallery shows only thumbnails' },
     { key: 'Z', desc: 'In Quick Look: Toggle Real Size 100% pixels vs Fit to screen' },
     { key: 'ESC', desc: 'Exit Fullscreen / Close modal dialogs / Back to gallery anywhere' },

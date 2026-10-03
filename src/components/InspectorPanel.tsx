@@ -1,3 +1,4 @@
+import { useAccess } from '../security/AccessProvider';
 import React from 'react';
 import {
   CalendarDays,
@@ -12,6 +13,8 @@ import {
 } from 'lucide-react';
 import { ImageItem } from '../types/gallery';
 import { getImageUrl } from '../services/api';
+import { AIResults } from './AIResults';
+import { AIFamily } from '../types/ai';
 
 interface InspectorPanelProps {
   image: ImageItem | null;
@@ -21,6 +24,9 @@ interface InspectorPanelProps {
   onOpenHashtags: () => void;
   onOpenComment: () => void;
   onOpenFullscreen: () => void;
+  onAnalyze: () => void;
+  onPromoteAI: (tags: string[]) => Promise<void>;
+  onClearAI: (family: AIFamily) => void;
 }
 
 const formatBytes = (bytes: number) => {
@@ -45,7 +51,12 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
   onOpenHashtags,
   onOpenComment,
   onOpenFullscreen,
-}) => (
+  onAnalyze,
+  onPromoteAI,
+  onClearAI,
+}) => {
+  const { canWrite } = useAccess();
+  return (
   <aside className={`inspector-panel ${isOpen ? 'is-open' : ''}`} aria-label="Image inspector">
     <div className="inspector-titlebar">
       <div>
@@ -75,6 +86,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
           <div><dt><CalendarDays aria-hidden="true" /> Created</dt><dd>{formatDate(image.createdAt)}</dd></div>
         </dl>
 
+        <AIResults key={image.id} image={image} onAnalyze={onAnalyze} onPromote={onPromoteAI} onClear={onClearAI} />
         <section className="inspector-section">
           <div className="section-label"><span>Rating</span><kbd>1–5</kbd></div>
           <div className="rating-control" aria-label={`Rating: ${image.score} out of 5`}>
@@ -82,7 +94,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
               <button
                 key={score}
                 type="button"
-                onClick={() => onRate(score === image.score ? 0 : score)}
+                disabled={!canWrite} onClick={() => onRate(score === image.score ? 0 : score)}
                 className={score <= image.score ? 'is-filled' : ''}
                 aria-label={`Rate ${score} stars`}
               >
@@ -94,7 +106,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
 
         <section className="inspector-section">
           <div className="section-label"><span>Tags</span><kbd>↩</kbd></div>
-          <button className="inspector-edit-row" onClick={onOpenHashtags} type="button">
+          <button className="inspector-edit-row" disabled={!canWrite} onClick={onOpenHashtags} type="button">
             <Hash aria-hidden="true" />
             <span className="tag-list">
               {image.hashtags.length > 0
@@ -106,7 +118,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
 
         <section className="inspector-section">
           <div className="section-label"><span>Comment</span><kbd>⇧↩</kbd></div>
-          <button className="inspector-edit-row inspector-comment" onClick={onOpenComment} type="button">
+          <button className="inspector-edit-row inspector-comment" disabled={!canWrite} onClick={onOpenComment} type="button">
             <MessageSquare aria-hidden="true" />
             <span>{image.comment || <em>Add a comment…</em>}</span>
           </button>
@@ -121,3 +133,4 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
     )}
   </aside>
 );
+};

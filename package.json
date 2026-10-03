@@ -10,7 +10,11 @@
     "server": "tsx server/index.ts",
     "start": "npm run dev",
     "generate-test-data": "tsx scripts/generate-test-images.ts",
-    "client": "vite"
+    "client": "vite",
+    "test:ai": "tsx --test scripts/ai.test.ts scripts/ai-ui.test.ts",
+    "ai:smoke": "tsx scripts/ai-smoke.ts",
+    "test:security": "tsx --test scripts/security.test.ts scripts/security-runtime.test.ts scripts/security-lifecycle.test.ts scripts/security-streams.test.ts scripts/security-work.test.ts scripts/connections.test.ts",
+    "serve": "npm run build && npm run server"
   },
   "dependencies": {
     "archiver": "^7.0.1",

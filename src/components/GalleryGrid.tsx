@@ -116,6 +116,7 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
           <ThumbnailCard
             key={image.id}
             image={image}
+            coloredRatings={thumbnailSettings.coloredRatings}
             alignment={resolveAlignment(parentFolder(image.path), thumbnailSettings)}
             isFocused={index === focusedIndex}
             isSelected={selectedIds.has(image.id)}

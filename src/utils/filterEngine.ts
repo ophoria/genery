@@ -87,13 +87,21 @@ export function filterImages(
       }
     }
 
-    // 8. Text Search Query (Filename or Comment)
+    const allTags = [...img.hashtags, ...Object.values(img.ai || {}).flatMap(result => result?.tags.map(tag => tag.label) || [])]
+      .map(tag => tag.trim().toLowerCase().replace(/^#/, ''));
+    const normalize = (tags: string[]) => tags.map(tag => tag.trim().toLowerCase().replace(/^#/, '')).filter(Boolean);
+    if (!normalize(filters.includedTags || []).every(tag => allTags.includes(tag))) return false;
+    if (normalize(filters.excludedTags || []).some(tag => allTags.includes(tag))) return false;
+
+    // 8. Text Search Query (Filename, Comment, Manual and AI Tags)
     if (filters.searchQuery.trim().length > 0) {
-      const query = filters.searchQuery.toLowerCase();
+      const query = filters.searchQuery.trim().toLowerCase();
+      const tagQuery = query.replace(/^#/, '');
       const matchName = img.name.toLowerCase().includes(query);
       const matchComment = img.comment.toLowerCase().includes(query);
-      const matchTags = img.hashtags.some((t) => t.toLowerCase().includes(query));
-      if (!matchName && !matchComment && !matchTags) return false;
+      const matchTags = img.hashtags.some((t) => t.toLowerCase().replace(/^#/, '').includes(tagQuery));
+      const matchAI = Object.values(img.ai || {}).some(result => result?.tags.some(tag => tag.label.toLowerCase().includes(tagQuery) || tag.group.toLowerCase().includes(query)));
+      if (!matchName && !matchComment && !matchTags && !matchAI) return false;
     }
 
     // 9. Advanced Rules Tree (AND / OR / NOT)
@@ -163,6 +171,15 @@ export function evaluateSingleRule(img: ImageItem, rule: SingleRule): boolean {
     case 'hashtag':
       imgVal = img.hashtags.map((t) => t.toLowerCase());
       break;
+    case 'aiTag':
+      imgVal = Object.values(img.ai || {}).flatMap(result => result?.tags.map(tag => tag.label.toLowerCase()) || []);
+      break;
+    case 'aiGroup':
+      imgVal = Object.values(img.ai || {}).flatMap(result => result?.tags.map(tag => tag.group.toLowerCase()) || []);
+      break;
+    case 'aiModel':
+      imgVal = Object.values(img.ai || {}).flatMap(result => result ? [result.variant] : []);
+      break;
     case 'comment':
       imgVal = img.comment.toLowerCase();
       break;
@@ -183,9 +200,9 @@ export function evaluateSingleRule(img: ImageItem, rule: SingleRule): boolean {
 
   switch (operator) {
     case 'equals':
-      return imgVal === targetVal;
+      return Array.isArray(imgVal) ? imgVal.includes(targetVal) : imgVal === targetVal;
     case 'not_equals':
-      return imgVal !== targetVal;
+      return Array.isArray(imgVal) ? !imgVal.includes(targetVal) : imgVal !== targetVal;
     case 'greater_than':
       return imgVal > Number(targetVal);
     case 'less_than':

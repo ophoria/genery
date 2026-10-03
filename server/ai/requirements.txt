@@ -1,0 +1,12 @@
+# Shared local inference runtime. RAM upstream is loaded at a pinned revision.
+torch==2.8.0
+torchvision==0.23.0
+transformers==4.51.3
+huggingface-hub==0.34.4
+onnxruntime==1.22.1
+numpy==1.26.4
+Pillow==11.3.0
+timm==0.9.16
+fairscale==0.4.13
+scipy==1.13.1
+einops==0.8.1

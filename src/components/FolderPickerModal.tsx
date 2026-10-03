@@ -1,3 +1,4 @@
+import { useAccess } from '../security/AccessProvider';
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { browseDirectory } from '../services/api';
 import { FolderNode } from '../types/gallery';
@@ -19,6 +20,10 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { useDialogFocus } from '../hooks/useDialogFocus';
+import {
+  FOLDER_SORT_KEY, FolderSortBy, FolderSortDirection,
+  readFolderSortSettings, readFolderLastUsed, recordFolderUse, sortFolders,
+} from '../utils/folderSorting';
 
 interface FolderPickerModalProps {
   isOpen: boolean;
@@ -35,6 +40,7 @@ export const FolderPickerModal: React.FC<FolderPickerModalProps> = ({
   onClose,
   onSelectFolder,
 }) => {
+  const { canWrite, canDelete, user } = useAccess();
   const [currentPath, setCurrentPath] = useState<string>('');
   const [inputPath, setInputPath] = useState<string>('');
   const [parentPath, setParentPath] = useState<string | null>(null);
@@ -47,6 +53,18 @@ export const FolderPickerModal: React.FC<FolderPickerModalProps> = ({
   const [filterQuery, setFilterQuery] = useState<string>('');
   const [isEditingPath, setIsEditingPath] = useState<boolean>(false);
   const [focusedIndex, setFocusedIndex] = useState<number>(-1);
+  const [sortSettings, setSortSettings] = useState(readFolderSortSettings);
+  const [lastUsed, setLastUsed] = useState(readFolderLastUsed);
+
+  useEffect(() => {
+    try { localStorage.setItem(FOLDER_SORT_KEY, JSON.stringify(sortSettings)); } catch { /* Storage may be unavailable. */ }
+  }, [sortSettings]);
+
+  const selectFolder = useCallback((folderPath: string) => {
+    setLastUsed(recordFolderUse(folderPath));
+    onSelectFolder(folderPath);
+    onClose();
+  }, [onSelectFolder, onClose]);
 
   const [homePath, setHomePath] = useState('');
   const requestId = useRef(0);
@@ -79,6 +97,7 @@ export const FolderPickerModal: React.FC<FolderPickerModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
+      setLastUsed(readFolderLastUsed());
       loadFolder(initialPath);
       setFilterQuery('');
       setIsEditingPath(false);
@@ -88,10 +107,9 @@ export const FolderPickerModal: React.FC<FolderPickerModalProps> = ({
 
   // Filtered directories based on search query
   const filteredDirectories = useMemo(() => {
-    if (!filterQuery.trim()) return directories;
     const q = filterQuery.toLowerCase().trim();
-    return directories.filter((dir) => dir.name.toLowerCase().includes(q));
-  }, [directories, filterQuery]);
+    return sortFolders(directories.filter((dir) => dir.name.toLowerCase().includes(q)), sortSettings, lastUsed);
+  }, [directories, filterQuery, sortSettings, lastUsed]);
 
   // Parse path breadcrumbs
   const breadcrumbs = useMemo(() => {
@@ -166,8 +184,7 @@ export const FolderPickerModal: React.FC<FolderPickerModalProps> = ({
           loadFolder(selectedPath);
         } else if (currentPath) {
           const targetToSelect = selectedPath || currentPath;
-          onSelectFolder(targetToSelect);
-          onClose();
+          selectFolder(targetToSelect);
         }
 
       }
@@ -188,6 +205,7 @@ export const FolderPickerModal: React.FC<FolderPickerModalProps> = ({
     loadFolder,
     onSelectFolder,
     onClose,
+    selectFolder,
   ]);
 
   if (!isOpen) return null;
@@ -225,7 +243,8 @@ export const FolderPickerModal: React.FC<FolderPickerModalProps> = ({
             <Home className="w-3.5 h-3.5 text-amber-400" />
             <span>Home</span>
           </button>
-          {homePath && (
+          {user.role !== 'admin' && user.grants.map(grant => <button className="flex items-center gap-1 px-2.5 py-1 bg-dark-800 hover:bg-dark-700 text-gray-300 rounded border border-dark-700 shrink-0 transition-colors" type="button" key={grant.path} onClick={() => void loadFolder(grant.path)} title={grant.path}><Folder className="w-3.5 h-3.5" aria-hidden="true" /><span>{grant.path.split('/').filter(Boolean).at(-1) || grant.path}</span></button>)}
+          {homePath && user.role === 'admin' && (
             <>
               <button
                 onClick={() => loadFolder(`${homePath}/Desktop`)}
@@ -314,8 +333,9 @@ export const FolderPickerModal: React.FC<FolderPickerModalProps> = ({
                   <React.Fragment key={crumb.path}>
                     {idx > 0 && <span className="text-gray-600 select-none">/</span>}
                     <button
+                      disabled={user.role !== 'admin' && !user.grants.some(grant => crumb.path === grant.path || grant.recursive && crumb.path.startsWith(grant.path.replace(/\/$/, '') + '/'))}
                       onClick={() => loadFolder(crumb.path)}
-                      className="px-1.5 py-0.5 rounded hover:bg-dark-700 text-gray-200 hover:text-blue-300 transition-colors shrink-0 max-w-[150px] truncate"
+                      className="px-1.5 py-0.5 rounded hover:bg-dark-700 text-gray-200 hover:text-blue-300 disabled:opacity-40 disabled:cursor-default transition-colors shrink-0 max-w-[150px] truncate"
                       title={crumb.path}
                     >
                       {crumb.name}
@@ -338,8 +358,8 @@ export const FolderPickerModal: React.FC<FolderPickerModalProps> = ({
         </div>
 
         {/* Search / Filter Subdirectories Input */}
-        <div className="px-4 py-2 bg-dark-900/40 border-b border-dark-700/80 flex items-center justify-between gap-3 shrink-0">
-          <div className="relative flex-1">
+        <div className="px-4 py-2 bg-dark-900/40 border-b border-dark-700/80 flex flex-wrap items-center justify-between gap-2 shrink-0">
+          <div className="relative flex-1 min-w-[180px]">
             <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
@@ -361,10 +381,43 @@ export const FolderPickerModal: React.FC<FolderPickerModalProps> = ({
               </button>
             )}
           </div>
+          <div className="flex items-center gap-1.5 text-xs">
+            <label htmlFor="folder-sort-by" className="text-gray-300">Sort by</label>
+            <select
+              id="folder-sort-by"
+              value={sortSettings.by}
+              onChange={(e) => {
+                setSortSettings((previous) => ({ ...previous, by: e.target.value as FolderSortBy }));
+                setFocusedIndex(-1);
+              }}
+              className="px-2 py-1 bg-dark-900 border border-dark-700 rounded-md text-xs text-gray-200"
+            >
+              <option value="name">Name</option>
+              <option value="createdAt">Creation date</option>
+              <option value="lastUsed">Last used</option>
+            </select>
+            <select
+              aria-label="Folder sort direction"
+              value={sortSettings.direction}
+              onChange={(e) => {
+                setSortSettings((previous) => ({ ...previous, direction: e.target.value as FolderSortDirection }));
+                setFocusedIndex(-1);
+              }}
+              className="px-2 py-1 bg-dark-900 border border-dark-700 rounded-md text-xs text-gray-200"
+            >
+              <option value="asc">Ascending</option>
+              <option value="desc">Descending</option>
+            </select>
+          </div>
           <span className="text-[11px] text-gray-400 shrink-0 font-medium">
             {filteredDirectories.length} {filteredDirectories.length === 1 ? 'folder' : 'folders'}
           </span>
         </div>
+        {sortSettings.by === 'lastUsed' && (
+          <p className="px-4 py-1.5 text-[11px] text-gray-300 border-b border-dark-700 shrink-0">
+            Last used tracks folder selections in Genery. Never-used folders appear last.
+          </p>
+        )}
 
         {/* Folder List (Main Scrollable Container - min-h-0 is essential for flex-1 scrolling) */}
         <div
@@ -430,6 +483,14 @@ export const FolderPickerModal: React.FC<FolderPickerModalProps> = ({
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
+                    {sortSettings.by !== 'name' && (() => {
+                      const date = sortSettings.by === 'createdAt' ? dir.createdAt : lastUsed[dir.path];
+                      return (
+                        <span className="text-[11px] text-gray-300 tabular-nums" title={date ? new Date(date).toLocaleString() : undefined}>
+                          {date ? new Date(date).toLocaleDateString() : sortSettings.by === 'lastUsed' ? 'Never used' : 'Unknown date'}
+                        </span>
+                      );
+                    })()}
                     <button
                       type="button"
                       onClick={(e) => {
@@ -478,8 +539,7 @@ export const FolderPickerModal: React.FC<FolderPickerModalProps> = ({
               type="button"
               disabled={loading || !!error || !targetFolderToSelect}
               onClick={() => {
-                onSelectFolder(targetFolderToSelect);
-                onClose();
+                selectFolder(targetFolderToSelect);
               }}
               className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded-lg shadow-lg shadow-blue-600/20 transition-colors flex items-center gap-1.5"
             >

@@ -7,6 +7,7 @@ import { getThumbnailUrl } from '../services/api';
 interface ThumbnailCardProps {
   image: ImageItem;
   alignment: ThumbnailAlignment;
+  coloredRatings: boolean;
   isFocused: boolean;
   isSelected: boolean;
   onFocus: () => void;
@@ -25,6 +26,7 @@ const formatDate = (value: string) => {
 export const ThumbnailCard: React.FC<ThumbnailCardProps> = ({
   image,
   alignment,
+  coloredRatings,
   isFocused,
   isSelected,
   onFocus,
@@ -34,7 +36,7 @@ export const ThumbnailCard: React.FC<ThumbnailCardProps> = ({
 }) => (
   <article
     data-image-id={image.id}
-    className={`proof-card ${isFocused ? 'is-focused' : ''} ${isSelected ? 'is-selected' : ''}`}
+    className={`proof-card ${coloredRatings ? 'has-colored-ratings' : ''} ${isFocused ? 'is-focused' : ''} ${isSelected ? 'is-selected' : ''}`}
     onClick={(event) => {
       if (event.shiftKey) onRangeSelection(event.metaKey || event.ctrlKey);
       else if (event.metaKey || event.ctrlKey) onToggleSelection();
@@ -50,7 +52,7 @@ export const ThumbnailCard: React.FC<ThumbnailCardProps> = ({
     aria-selected={isSelected}
     tabIndex={isFocused ? 0 : -1}
   >
-    <div className="proof-image">
+    <div className="proof-image" data-rating={coloredRatings && image.score > 0 ? image.score : undefined}>
       <img
         src={getThumbnailUrl(image.path, 480)}
         alt={image.name}

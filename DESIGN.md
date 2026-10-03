@@ -200,6 +200,8 @@ Spacing follows a compact 4–17px rhythm. Hairline dividers establish pane owne
 
 **The Center Pane Rule.** Responsive decisions protect the proof grid first: collapse secondary chrome before reducing the image workspace below practical review density.
 
+Access settings extend the incumbent sheet: a viewport-bounded scrolling surface (up to 620px wide), 20px section padding, and hairline section seams. Sign-in centers a compact sheet (up to 380px wide) on the deep canvas with 24px inset padding. Account and network forms use a single-column grid with 14px field gaps; account action rows wrap, and long directory paths and connection addresses break within the available width.
+
 ## Elevation & Depth
 
 The system is flat and layered by tone at rest. One shallow structural shadow separates toolbar chrome, while a single deeper overlay tier lifts notices, drawers, menus, filters, and sheets. Selected images use a crisp blue ring, never a diffuse glow. Translucency and blur belong only to chrome and overlays where underlying context remains useful.
@@ -266,6 +268,16 @@ The proof cell is the signature component: a dominant 4:3 image, restrained file
 ### Inspector and Sheets
 
 The inspector is persistent context, not a dashboard card. Its sections are separated by hairlines and its file facts align label/value pairs. Modal sheets use graphite translucency, the single sheet shadow tier, 10px corners, clear title and action zones, and explicit destructive warnings.
+
+### Access, Sign-in, and Settings
+
+Access uses the existing graphite sheet, inset fields, optical-blue focus, and compact chrome controls. Form labels stay at 12.5px, network legends and account headings at 14px, and the Settings title at 16px. The 20px sign-in identity heading belongs to this focused entry surface; it does not introduce a display type scale.
+
+Local network and Internet remain separate fieldsets. Guest access exposes a role selector and repeatable directory grants with an explicit Include subfolders checkbox. User rows align identity, role, and directory scope beside Edit and Remove actions; creating and editing reuse the same labeled form. Permission-dependent controls communicate the active user's capabilities, and inline alert/status text explains failure, saving, completion, and account changes.
+
+Enabled connection addresses are selectable, wrapping code text beside a Lucide Copy control. The full server-returned URL retains its scheme and configured port. Copy confirmation has a live status message; clipboard failure explains manual selection. At the compact-label breakpoint (850px), the Copy label hides while its icon and address-specific accessible name remain. Text-only access form actions retain intrinsic width and horizontal padding at narrow sizes; their labels remain visible.
+
+**The Access Action Width Rule.** Access form text actions retain intrinsic width and readable labels on narrow screens; only icon-backed connection Copy actions collapse their visible label.
 
 ## Do's and Don'ts
 

@@ -7,7 +7,7 @@ Object.defineProperty(globalThis, 'localStorage', { value: { getItem: () => save
 
 test('old settings retain size and ratio and default to center', () => {
   saved = JSON.stringify({ size: 210, ratio: '3:4' });
-  assert.deepEqual(readThumbnailSettings(), { size: 210, ratio: '3:4', alignment: 'center', folderAlignments: {} });
+  assert.deepEqual(readThumbnailSettings(), { size: 210, ratio: '3:4', alignment: 'center', coloredRatings: false, folderAlignments: {} });
 });
 test('nearest ancestor wins, with exact directory boundaries and reset to inherit', () => {
   saved = null;

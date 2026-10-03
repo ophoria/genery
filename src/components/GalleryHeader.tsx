@@ -1,3 +1,4 @@
+import { useAccess } from '../security/AccessProvider';
 import React, { useEffect, useState } from 'react';
 import {
   FolderOpen,
@@ -10,6 +11,9 @@ import {
   Grid2X2,
   List,
   MoreHorizontal,
+  ScanSearch,
+  BarChart3,
+  Settings,
 } from 'lucide-react';
 
 interface GalleryHeaderProps {
@@ -27,7 +31,12 @@ interface GalleryHeaderProps {
   onToggleInspector: () => void;
   onOpenBatchModal: () => void;
   onOpenShortcutsModal: () => void;
+  onOpenSettings: () => void;
   onToggleFullscreen: () => void;
+  onOpenAI: () => void;
+  aiBusy?: boolean;
+  onOpenAIStatistics: () => void;
+  isAIStatisticsOpen: boolean;
 }
 
 export const GalleryHeader: React.FC<GalleryHeaderProps> = ({
@@ -45,8 +54,14 @@ export const GalleryHeader: React.FC<GalleryHeaderProps> = ({
   onToggleInspector,
   onOpenBatchModal,
   onOpenShortcutsModal,
+  onOpenSettings,
   onToggleFullscreen,
+  onOpenAI,
+  aiBusy,
+  onOpenAIStatistics,
+  isAIStatisticsOpen,
 }) => {
+  const { canWrite, canDelete, user } = useAccess();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -113,8 +128,8 @@ export const GalleryHeader: React.FC<GalleryHeaderProps> = ({
         type="search"
         value={searchQuery}
         onChange={(event) => onSearchChange(event.target.value)}
-        placeholder="Search"
-        aria-label="Search images"
+        placeholder="Search names, comments, tags"
+        aria-label="Search image names, comments, and tags"
       />
       <kbd>⌘F</kbd>
     </label>
@@ -140,11 +155,19 @@ export const GalleryHeader: React.FC<GalleryHeaderProps> = ({
       <span>Inspector</span>
     </button>
 
-    <button className="toolbar-button batch-button" onClick={onOpenBatchModal} type="button">
+    <button className={`toolbar-button ai-toolbar-button${aiBusy ? ' is-active' : ''}`} disabled={!canWrite} onClick={onOpenAI} type="button" title="Local AI image classification">
+      <ScanSearch aria-hidden="true" /><span>{aiBusy ? 'AI · Working' : 'AI'}</span>
+    </button>
+    <button className={`toolbar-button ai-statistics-toggle${isAIStatisticsOpen ? ' is-active' : ''}`} onClick={onOpenAIStatistics} type="button" aria-pressed={isAIStatisticsOpen} title="AI tag statistics"><BarChart3 aria-hidden="true" /><span>Statistics</span></button>
+    <button className="toolbar-button batch-button" disabled={!canWrite} onClick={onOpenBatchModal} type="button">
       <Layers3 aria-hidden="true" />
       <span>{selectedCount > 0 ? `Batch · ${selectedCount}` : 'Batch'}</span>
     </button>
 
+    <div className="toolbar-utilities">
+    <button className="icon-button" onClick={onOpenSettings} type="button" title="Settings" aria-label="Settings" aria-haspopup="dialog">
+      <Settings aria-hidden="true" />
+    </button>
     <button
       className="icon-button shortcuts-button"
       onClick={onOpenShortcutsModal}
@@ -154,6 +177,8 @@ export const GalleryHeader: React.FC<GalleryHeaderProps> = ({
     >
       <Keyboard aria-hidden="true" />
     </button>
+
+    </div>
 
     <button
       className={`icon-button mobile-more-button ${isMobileMenuOpen ? 'is-active' : ''}`}
@@ -177,8 +202,8 @@ export const GalleryHeader: React.FC<GalleryHeaderProps> = ({
             type="search"
             value={searchQuery}
             onChange={(event) => onSearchChange(event.target.value)}
-            placeholder="Search images"
-            aria-label="Search images"
+            placeholder="Search names, comments, tags"
+            aria-label="Search image names, comments, and tags"
             autoFocus
           />
         </label>
@@ -194,6 +219,8 @@ export const GalleryHeader: React.FC<GalleryHeaderProps> = ({
           <Keyboard aria-hidden="true" />
           <span>Keyboard shortcuts</span>
         </button>
+        <button type="button" onClick={() => { onOpenAIStatistics(); setIsMobileMenuOpen(false); }}><BarChart3 aria-hidden="true" /><span>AI tag statistics</span></button>
+        <button type="button" onClick={() => { onOpenAI(); setIsMobileMenuOpen(false); }}><ScanSearch aria-hidden="true" /><span>Local AI analysis{aiBusy ? ' · Working' : ''}</span></button>
       </div>
     )}
   </header>

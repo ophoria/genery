@@ -31,6 +31,9 @@ The product runs locally in a desktop browser alongside the user's filesystem. T
 - Keyboard and mouse navigation.
 - Ratings, hashtags, and comments stored locally.
 - Bulk copy, delete, rename, and ZIP operations.
+- Built-in local image analysis with RAM / RAM++, WD SwinV2 / EVA02, and SigLIP 2, including family-specific thresholds and editable SigLIP classification descriptions.
+- Cancellable background installation and analysis, cached per-image results, AI-aware search and filters, and inspector suggestions that users can promote to ordinary hashtags.
+- AI installation requires internet access and Python 3.10+; RAM also requires git. Installed models analyze local images offline without modifying originals. RAM and SigLIP support Apple GPU or CPU; WD uses ONNX on CPU. Settings and results persist locally, but server restarts stop active tasks; reruns reuse matching completed results. Match scores are not calibrated confidence percentages.
 - Existing functionality and direct filesystem behavior must be preserved during the redesign.
 
 ## Brand Commitments

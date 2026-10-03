@@ -4,6 +4,7 @@ import { imageSize } from 'image-size';
 import sharp from 'sharp';
 import { ImageItem, ScanResult } from '../src/types/gallery.js';
 import { metadataStore } from './metadataStore.js';
+import { getAIResults } from './ai/store.js';
 
 const SUPPORTED_EXTENSIONS = new Set([
   'jpg', 'jpeg', 'png', 'webp', 'gif', 'svg', 'bmp', 'avif', 'tiff', 'tif', 'ico'
@@ -44,7 +45,8 @@ const MAX_DEPTH = 8;
 
 export async function scanDirectory(
   dirPath: string,
-  includeSubdirs: boolean = true
+  includeSubdirs: boolean = true,
+  permitted: (file: string, kind: 'image' | 'directory') => boolean = () => true
 ): Promise<ScanResult> {
   const images: ImageItem[] = [];
   const foundTypes = new Set<string>();
@@ -59,7 +61,7 @@ export async function scanDirectory(
   }
 
   async function walkDir(currentDir: string, currentDepth: number) {
-    if (images.length >= MAX_SCANNED_IMAGES || currentDepth > MAX_DEPTH) {
+    if (!permitted(currentDir, 'directory') || images.length >= MAX_SCANNED_IMAGES || currentDepth > MAX_DEPTH) {
       return;
     }
 
@@ -96,11 +98,11 @@ export async function scanDirectory(
         }
       } else if (entry.isFile()) {
         const ext = path.extname(entry.name).toLowerCase().replace(/^\./, '');
-        if (SUPPORTED_EXTENSIONS.has(ext)) {
+        if (SUPPORTED_EXTENSIONS.has(ext) && permitted(fullPath, 'image')) {
           foundTypes.add(ext);
           try {
             const item = await processFile(fullPath, dirPath, ext);
-            if (item) {
+            if (item && permitted(fullPath, 'image')) {
               images.push(item);
             }
           } catch (err) {
@@ -172,5 +174,6 @@ async function processFile(
     score: meta.score || 0,
     hashtags: meta.hashtags || [],
     comment: meta.comment || '',
+    ai: getAIResults(fullPath),
   };
 }

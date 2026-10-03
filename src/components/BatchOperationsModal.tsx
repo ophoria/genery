@@ -1,3 +1,4 @@
+import { useAccess } from '../security/AccessProvider';
 import React, { useEffect, useState } from 'react';
 import { ImageItem, BatchAction, BatchResult } from '../types/gallery';
 import { sendBatchRequest } from '../services/api';
@@ -30,6 +31,7 @@ export const BatchOperationsModal: React.FC<BatchOperationsModalProps> = ({
   onClose,
   onSuccess,
 }) => {
+  const { canWrite, canDelete, user } = useAccess();
   const [action, setAction] = useState<BatchAction>('copy');
   const [scope, setScope] = useState<'filtered' | 'selected'>(
     selectedImages.length > 0 ? 'selected' : 'filtered'
@@ -159,7 +161,7 @@ export const BatchOperationsModal: React.FC<BatchOperationsModalProps> = ({
                   { key: 'delete', label: 'Delete', icon: Trash2, color: 'red' },
                   { key: 'rename', label: 'Rename', icon: Edit3, color: 'amber' },
                   { key: 'zip', label: 'Zip', icon: FileArchive, color: 'emerald' },
-                ].map((act) => {
+                ].filter(act => act.key !== 'delete' || canDelete).map((act) => {
                   const Icon = act.icon;
                   const isAct = action === act.key;
                   return (

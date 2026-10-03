@@ -300,6 +300,11 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
             </div>
           </div>
 
+          <div className="tag-filter-fields">
+            <label>Include tags<input type="text" value={(filters.includedTags || []).join(',')} onChange={event => onFilterChange({ ...filters, includedTags: event.target.value.split(',') })} placeholder="e.g. forest, pixel art" /></label>
+            <label>Exclude tags<input type="text" value={(filters.excludedTags || []).join(',')} onChange={event => onFilterChange({ ...filters, excludedTags: event.target.value.split(',') })} placeholder="e.g. portrait, vehicle" /></label>
+            <p>Manual and AI tags · comma-separated · include all, exclude any</p>
+          </div>
           {/* Hashtag filter input & operator */}
           <div>
             <div className="flex items-center justify-between text-[10px] text-gray-400">

@@ -1,3 +1,5 @@
+import type { AIFamily, AIResult } from './ai';
+
 export interface ImageItem {
   id: string;
   path: string;
@@ -13,6 +15,7 @@ export interface ImageItem {
   score: number; // 0 to 5
   hashtags: string[];
   comment: string;
+  ai?: Partial<Record<AIFamily, AIResult>>;
 }
 
 export type AspectRatioFilter = 'any' | 'landscape' | 'portrait' | 'square';
@@ -32,6 +35,8 @@ export interface BasicFilterOptions {
   maxScore?: number;
   hashtags: string[];
   hashtagOperator: 'AND' | 'OR' | 'NOT';
+  includedTags?: string[];
+  excludedTags?: string[];
   searchQuery: string;
 }
 
@@ -42,7 +47,10 @@ export type FilterField =
   | 'aspectRatio' 
   | 'score' 
   | 'hashtag' 
-  | 'comment' 
+  | 'comment'
+  | 'aiTag'
+  | 'aiGroup'
+  | 'aiModel'
   | 'createdAt' 
   | 'size' 
   | 'name';
@@ -90,6 +98,7 @@ export interface FolderNode {
   name: string;
   path: string;
   hasSubdirs: boolean;
+  createdAt?: number | null;
 }
 
 export type BatchAction = 'copy' | 'delete' | 'rename' | 'zip';

@@ -8,12 +8,13 @@ export interface ThumbnailSettings {
   size: number;
   ratio: ThumbnailRatio;
   alignment: ThumbnailAlignment;
+  coloredRatings: boolean;
   folderAlignments: Record<string, ThumbnailAlignment>;
 }
 export const THUMBNAIL_SETTINGS_KEY = 'genery.thumbnailSettings';
 
 export function readThumbnailSettings(): ThumbnailSettings {
-  const defaults: ThumbnailSettings = { size: 155, ratio: 'auto', alignment: 'center', folderAlignments: {} };
+  const defaults: ThumbnailSettings = { size: 155, ratio: 'auto', alignment: 'center', coloredRatings: false, folderAlignments: {} };
   try {
     const saved = JSON.parse(localStorage.getItem(THUMBNAIL_SETTINGS_KEY) || 'null');
     return {
@@ -22,6 +23,7 @@ export function readThumbnailSettings(): ThumbnailSettings {
       ratio: saved?.ratio === 'auto' || THUMBNAIL_RATIOS.includes(saved?.ratio)
         ? saved.ratio : defaults.ratio,
       alignment: isAlignment(saved?.alignment) ? saved.alignment : defaults.alignment,
+      coloredRatings: typeof saved?.coloredRatings === 'boolean' ? saved.coloredRatings : defaults.coloredRatings,
       folderAlignments: Object.fromEntries(
         Object.entries(saved?.folderAlignments && typeof saved.folderAlignments === 'object'
           && !Array.isArray(saved.folderAlignments) ? saved.folderAlignments : {})

@@ -55,6 +55,12 @@ export function ThumbnailControls({ settings, directoryPath, images, autoRatio, 
           {THUMBNAIL_ALIGNMENTS.map((value) => <option key={value} value={value}>{label(value)}</option>)}
         </select>
       </label>
+      <label className="mac-toggle-row thumbnail-colored-ratings-control" title="Rating frames: 1 red, 2 orange, 3 light blue, 4 blue, 5 green">
+        <input type="checkbox" role="switch" checked={settings.coloredRatings}
+          onChange={(event) => onChange({ ...settings, coloredRatings: event.target.checked })} />
+        <span className="mac-toggle" aria-hidden="true" />
+        <span>Colored Ratings</span>
+      </label>
       {root && <div className="thumbnail-folder-controls" role="group" aria-label="Folder thumbnail alignment">
         <label className="thumbnail-folder-picker">
           <span>Folder</span>

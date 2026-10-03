@@ -21,9 +21,18 @@ import { HashtagModal } from './components/HashtagModal';
 import { CommentModal } from './components/CommentModal';
 import { BatchOperationsModal } from './components/BatchOperationsModal';
 import { FolderPickerModal } from './components/FolderPickerModal';
+import { SettingsModal } from './components/SettingsModal';
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
 
 import { ThumbnailControls } from './components/ThumbnailControls';
+import { AIAnalysisModal } from './components/AIAnalysisModal';
+import { AIStatisticsPage } from './components/AIStatisticsPage';
+import { AIProgress } from './components/AIProgress';
+import type { AIJob } from './types/ai';
+import { analysisSummary, shouldNotifyAnalysisDone } from './utils/aiProgress';
+import { useAccess } from './security/AccessProvider';
+import { useAI } from './hooks/useAI';
+import { fetchAIResults } from './services/ai';
 import { dominantRatio, ratioValue, readThumbnailSettings, THUMBNAIL_SETTINGS_KEY } from './utils/thumbnailSettings';
 
 const DEFAULT_FILTERS: BasicFilterOptions = {
@@ -61,9 +70,10 @@ function readLastFolder(): string {
 }
 
 export default function App() {
+  const access = useAccess();
   const [allImages, setAllImages] = useState<ImageItem[]>([]);
   const [availableTypes, setAvailableTypes] = useState<string[]>([]);
-  const [directoryPath, setDirectoryPath] = useState(readLastFolder);
+  const [directoryPath, setDirectoryPath] = useState(() => access.user.role === 'admin' ? readLastFolder() : access.user.grants[0]?.path || '');
   const scanRequest = useRef(0);
   const [completedScanVersion, setCompletedScanVersion] = useState(0);
   const [includeSubdirs, setIncludeSubdirs] = useState(true);
@@ -107,6 +117,7 @@ export default function App() {
   const [gridColumns, setGridColumns] = useState(1);
 
   const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
+  const [isExpandedView, setIsExpandedView] = useState(false);
   const [isWindowFullscreen, setIsWindowFullscreen] = useState(Boolean(document.fullscreenElement));
   const fullscreenPending = useRef(false);
 
@@ -139,7 +150,32 @@ export default function App() {
   const [isCommentModalOpen, setIsCommentModalOpen] = useState(false);
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
   const [isFolderPickerOpen, setIsFolderPickerOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
+  const [isAIStatisticsOpen, setIsAIStatisticsOpen] = useState(false);
+  const [scannedDirectory, setScannedDirectory] = useState('');
+  const [scannedSubdirs, setScannedSubdirs] = useState(true);
+  const [isAIModalOpen, setIsAIModalOpen] = useState(false);
+  const ai = useAI(() => {
+    if (!allImages.length) return;
+    void fetchAIResults(allImages.map(image => image.path)).then(results => {
+      setAllImages(current => current.map(image => results[image.path] ? { ...image, ai: results[image.path] } : image));
+    }).catch(error => setNotice(getErrorMessage(error, 'Could not load AI results.')));
+  });
+
+  const [dismissedAnalysisJobId, setDismissedAnalysisJobId] = useState<string | null>(null);
+  const [analysisToast, setAnalysisToast] = useState<AIJob | null>(null);
+  const previousAIJob = useRef<AIJob | null>(null);
+  useEffect(() => {
+    const next = ai.status?.job ?? null;
+    if (shouldNotifyAnalysisDone(previousAIJob.current, next, isAIModalOpen)) setAnalysisToast(next);
+    previousAIJob.current = next;
+  }, [ai.status?.job, isAIModalOpen]);
+  useEffect(() => {
+    if (!analysisToast) return;
+    const timer = window.setTimeout(() => setAnalysisToast(null), 10000);
+    return () => window.clearTimeout(timer);
+  }, [analysisToast]);
 
   const handleScan = useCallback(async (pathOverride?: string) => {
     const request = ++scanRequest.current;
@@ -148,6 +184,8 @@ export default function App() {
     try {
       const result = await scanFolder(pathOverride || directoryPath, includeSubdirs);
       if (request !== scanRequest.current) return;
+      setScannedDirectory(result.directory);
+      setScannedSubdirs(includeSubdirs);
       try {
         localStorage.setItem(LAST_FOLDER_KEY, result.directory);
       } catch {
@@ -225,6 +263,8 @@ export default function App() {
       filters.minScore ||
       filters.maxScore ||
       filters.hashtags.length ||
+      filters.includedTags?.some(tag => tag.trim()) ||
+      filters.excludedTags?.some(tag => tag.trim()) ||
       advancedGroup.rules.length ||
       quickView !== 'all'
     ),
@@ -264,6 +304,7 @@ export default function App() {
   // Serialize rating gestures so rapid number presses are saved in their original order.
   const ratingQueue = useRef<Promise<void>>(Promise.resolve());
   const rateImages = useCallback((targets: ImageItem[], score: number) => {
+    if (!access.canWrite) return Promise.resolve();
     ratingQueue.current = ratingQueue.current.then(async () => {
       const results = await Promise.allSettled(targets.map((image) => updateImageMetadata(image.path, { score })));
       const savedIds = new Set(targets.filter((_, index) => results[index].status === 'fulfilled').map((image) => image.id));
@@ -290,7 +331,7 @@ export default function App() {
   }, [selectedImages, focusedImage, rateImages]);
 
   const handleSaveHashtags = useCallback(async (hashtags: string[]) => {
-    if (!focusedImage) return;
+    if (!access.canWrite || !focusedImage) return;
     const target = focusedImage;
     setAllImages((images) => images.map((image) => image.id === target.id ? { ...image, hashtags } : image));
     try {
@@ -302,7 +343,7 @@ export default function App() {
   }, [focusedImage]);
 
   const handleSaveComment = useCallback(async (comment: string) => {
-    if (!focusedImage) return;
+    if (!access.canWrite || !focusedImage) return;
     const target = focusedImage;
     setAllImages((images) => images.map((image) => image.id === target.id ? { ...image, comment } : image));
     try {
@@ -328,9 +369,25 @@ export default function App() {
 
   useEffect(() => {
     const handleGlobalKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'f') {
+      if (isAIModalOpen || isSettingsOpen) return;
+      if (event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === 'f') {
         event.preventDefault();
-        if (!isWindowFullscreen) document.querySelector<HTMLInputElement>('[aria-label="Search images"]')?.focus();
+        if (!event.repeat && !isHashtagModalOpen && !isCommentModalOpen && !isBatchModalOpen && !isFolderPickerOpen && !isShortcutsModalOpen) {
+          setIsExpandedView(expanded => !expanded);
+          if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+        }
+        return;
+      }
+      if (isAIStatisticsOpen) {
+        if (event.key === 'Escape' && isExpandedView && !isHashtagModalOpen && !isCommentModalOpen && !isBatchModalOpen && !isFolderPickerOpen && !isShortcutsModalOpen) {
+          event.preventDefault();
+          if (!event.repeat) setIsExpandedView(false);
+        }
+        return;
+      }
+      if (event.metaKey && event.key.toLowerCase() === 'f') {
+        event.preventDefault();
+        if (!isWindowFullscreen && !isExpandedView) document.querySelector<HTMLInputElement>('[aria-label="Search image names, comments, and tags"]')?.focus();
         return;
       }
 
@@ -339,7 +396,8 @@ export default function App() {
         isCommentModalOpen ||
         isBatchModalOpen ||
         isFolderPickerOpen ||
-        isShortcutsModalOpen
+        isShortcutsModalOpen ||
+        isAIModalOpen
       ) return;
 
       const target = event.target as HTMLElement;
@@ -347,6 +405,11 @@ export default function App() {
       if (event.key.toLowerCase() === 'f' && !event.metaKey && !event.ctrlKey && !event.altKey) {
         event.preventDefault();
         if (!event.repeat) void toggleWindowFullscreen();
+        return;
+      }
+      if (event.key === 'Escape' && isExpandedView && !isFullscreenOpen) {
+        event.preventDefault();
+        if (!event.repeat) setIsExpandedView(false);
         return;
       }
       if (event.key === 'Escape' && isWindowFullscreen && !isFullscreenOpen) {
@@ -387,10 +450,10 @@ export default function App() {
       } else if (event.key === ' ' || event.code === 'Space') {
         event.preventDefault();
         setIsFullscreenOpen(true);
-      } else if (event.key === 'Enter' && event.shiftKey) {
+      } else if (access.canWrite && event.key === 'Enter' && event.shiftKey) {
         event.preventDefault();
         setIsCommentModalOpen(true);
-      } else if (event.key === 'Enter') {
+      } else if (access.canWrite && event.key === 'Enter') {
         event.preventDefault();
         setIsHashtagModalOpen(true);
       }
@@ -407,9 +470,13 @@ export default function App() {
     isFolderPickerOpen,
     isFullscreenOpen,
     isWindowFullscreen,
+    isExpandedView,
     toggleWindowFullscreen,
     isHashtagModalOpen,
     isShortcutsModalOpen,
+    isSettingsOpen,
+    isAIModalOpen,
+    isAIStatisticsOpen,
     moveFocus,
     processedImages,
     rateImages,
@@ -424,7 +491,7 @@ export default function App() {
   };
 
   return (
-    <div className={`app-shell${isWindowFullscreen ? ' is-window-fullscreen' : ''}`}>
+    <div className={`app-shell${isWindowFullscreen || isExpandedView ? ' is-window-fullscreen' : ''}`}>
       <GalleryHeader
         directoryPath={directoryPath}
         searchQuery={searchQuery}
@@ -440,10 +507,23 @@ export default function App() {
         onToggleInspector={() => setIsInspectorOpen((open) => !open)}
         onOpenBatchModal={() => setIsBatchModalOpen(true)}
         onOpenShortcutsModal={() => setIsShortcutsModalOpen(true)}
+        onOpenSettings={() => setIsSettingsOpen(true)}
         onToggleFullscreen={() => void toggleWindowFullscreen()}
+        onOpenAIStatistics={() => setIsAIStatisticsOpen(open => !open)}
+        isAIStatisticsOpen={isAIStatisticsOpen}
+        onOpenAI={() => setIsAIModalOpen(true)}
+        aiBusy={ai.status?.job?.state === 'running'}
       />
 
-      <div className="workspace">
+      {!isAIModalOpen && ai.status?.job?.kind === 'analyze' && dismissedAnalysisJobId !== ai.status.job.id && <div className="ai-header-progress">
+        <div className="ai-job-heading"><strong>AI Analysis · {ai.status.job.state === 'running' ? `${ai.status.job.completed + ai.status.job.skipped + ai.status.job.failed} / ${ai.status.job.total}` : ai.status.job.state}</strong><div className="ai-progress-actions"><button className="ai-text-button" type="button" onClick={() => setIsAIModalOpen(true)}>View analysis</button><button className="icon-button" type="button" aria-label="Dismiss analysis progress" title="Dismiss analysis progress" onClick={() => setDismissedAnalysisJobId(ai.status!.job!.id)}><X aria-hidden="true" /></button></div></div>
+        <AIProgress job={ai.status.job} />
+      </div>}
+      {isAIStatisticsOpen ? <AIStatisticsPage images={allImages} directory={scannedDirectory} includeSubdirs={scannedSubdirs} isScanning={isScanning} onBack={() => setIsAIStatisticsOpen(false)} onAnalyze={() => setIsAIModalOpen(true)} onTag={tag => {
+        resetFilters();
+        setFilters({ ...DEFAULT_FILTERS, includedTags: [tag] });
+        setIsAIStatisticsOpen(false);
+      }} /> : <div className="workspace">
         <SourceSidebar
           directoryPath={directoryPath}
           includeSubdirs={includeSubdirs}
@@ -458,6 +538,10 @@ export default function App() {
           onOpenFolderPicker={() => setIsFolderPickerOpen(true)}
           onScan={() => void handleScan()}
           onQuickViewChange={setQuickView}
+          onSelectAll={() => {
+            setSelectedIds(new Set(processedImages.map((image) => image.id)));
+            selectionAnchor.current = processedImages[0]?.id ?? null;
+          }}
         />
 
         <main className="workspace-main">
@@ -529,15 +613,31 @@ export default function App() {
           onOpenHashtags={() => setIsHashtagModalOpen(true)}
           onOpenComment={() => setIsCommentModalOpen(true)}
           onOpenFullscreen={() => setIsFullscreenOpen(true)}
+          onAnalyze={() => setIsAIModalOpen(true)}
+          onPromoteAI={async (tags) => {
+            if (!access.canWrite || !focusedImage) return;
+            const hashtags = Array.from(new Set([...focusedImage.hashtags, ...tags]));
+            await updateImageMetadata(focusedImage.path, { hashtags });
+            setAllImages(current => current.map(image => image.id === focusedImage.id ? { ...image, hashtags } : image));
+          }}
+          onClearAI={(family) => {
+            if (!access.canWrite || !focusedImage) return;
+            setAllImages(current => current.map(image => {
+              if (image.id !== focusedImage.id) return image;
+              const results = { ...image.ai };
+              delete results[family];
+              return { ...image, ai: results };
+            }));
+          }}
         />
-      </div>
+      </div>}
 
       {isFullscreenOpen && focusedImage && (
         <FullscreenViewer
           image={focusedImage}
           currentIndex={focusedIndex}
           totalImages={processedImages.length}
-          shortcutsEnabled={!isHashtagModalOpen && !isCommentModalOpen}
+          shortcutsEnabled={!isHashtagModalOpen && !isCommentModalOpen && !isAIModalOpen}
           onClose={() => setIsFullscreenOpen(false)}
           onNext={() => moveFocus(focusedIndex + 1)}
           onPrev={() => moveFocus(focusedIndex - 1)}
@@ -566,6 +666,10 @@ export default function App() {
       )}
 
       <div className="toast-region" role="status" aria-live="polite" aria-atomic="true">
+        {analysisToast && <div className="deletion-toast">
+          <CheckCircle aria-hidden="true" /><div><strong>AI Analysis done</strong><p className="rating-toast-detail">{analysisSummary(analysisToast)}</p></div>
+          <button className="icon-button" type="button" aria-label="Dismiss AI analysis notification" onClick={() => setAnalysisToast(null)}><X aria-hidden="true" /></button>
+        </div>}
         {ratingToast && (
           <div className={`deletion-toast${ratingToast.failedCount ? ' rating-toast-warning' : ''}`}>
             {ratingToast.failedCount ? <AlertCircle aria-hidden="true" /> : <CheckCircle aria-hidden="true" />}
@@ -624,10 +728,12 @@ export default function App() {
         }}
       />
 
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} onImported={() => handleScan()} />
       <KeyboardShortcutsModal
         isOpen={isShortcutsModalOpen}
         onClose={() => setIsShortcutsModalOpen(false)}
       />
+      <AIAnalysisModal isOpen={isAIModalOpen} status={ai.status} serviceError={ai.error} selected={selectedImages} filtered={processedImages} focused={focusedImage} onClose={() => setIsAIModalOpen(false)} onRefresh={ai.refresh} />
     </div>
   );
 }

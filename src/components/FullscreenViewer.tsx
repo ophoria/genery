@@ -1,3 +1,4 @@
+import { useAccess } from '../security/AccessProvider';
 import React, { useState, useEffect } from 'react';
 import { ImageItem } from '../types/gallery';
 import { getImageUrl } from '../services/api';
@@ -41,6 +42,7 @@ export const FullscreenViewer: React.FC<FullscreenViewerProps> = ({
   onOpenHashtags,
   onOpenComment,
 }) => {
+  const { canWrite, canDelete, user } = useAccess();
   // 'fit' vs 'real' (100% pixel scale)
   const [isRealSize, setIsRealSize] = useState<boolean>(false);
   const dialogRef = useDialogFocus<HTMLDivElement>(true);
@@ -66,13 +68,13 @@ export const FullscreenViewer: React.FC<FullscreenViewerProps> = ({
       } else if ((e.key === 'z' || e.key === 'Z') && !e.metaKey && !e.ctrlKey && !e.altKey) {
         e.preventDefault();
         if (!e.repeat) setIsRealSize((prev) => !prev);
-      } else if (['1', '2', '3', '4', '5'].includes(e.key)) {
+      } else if (canWrite && ['1', '2', '3', '4', '5'].includes(e.key)) {
         e.preventDefault();
         onRate(parseInt(e.key, 10));
-      } else if (e.key === 'Enter' && !e.shiftKey) {
+      } else if (canWrite && e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         onOpenHashtags();
-      } else if (e.key === 'Enter' && e.shiftKey) {
+      } else if (canWrite && e.key === 'Enter' && e.shiftKey) {
         e.preventDefault();
         onOpenComment();
       }
@@ -80,7 +82,7 @@ export const FullscreenViewer: React.FC<FullscreenViewerProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [shortcutsEnabled, onClose, onNext, onPrev, onRate, onOpenHashtags, onOpenComment]);
+  }, [canWrite, shortcutsEnabled, onClose, onNext, onPrev, onRate, onOpenHashtags, onOpenComment]);
 
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return '0 B';
@@ -218,7 +220,7 @@ export const FullscreenViewer: React.FC<FullscreenViewerProps> = ({
             {[1, 2, 3, 4, 5].map((star) => (
               <button
                 key={star}
-                onClick={() => onRate(star === image.score ? 0 : star)}
+                disabled={!canWrite} onClick={() => onRate(star === image.score ? 0 : star)}
                 className={`p-1 rounded hover:bg-dark-700 transition-colors ${
                   star <= image.score ? 'text-yellow-400' : 'text-gray-600 hover:text-gray-400'
                 }`}
@@ -233,7 +235,7 @@ export const FullscreenViewer: React.FC<FullscreenViewerProps> = ({
         {/* Hashtags & Comment Trigger buttons */}
         <div className="flex items-center gap-3">
           <button
-            onClick={onOpenHashtags}
+            disabled={!canWrite} onClick={onOpenHashtags}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-dark-800 hover:bg-dark-700 text-blue-300 rounded border border-dark-600 transition-colors"
             title="Edit Hashtags (HotKey: Enter)"
           >
@@ -242,7 +244,7 @@ export const FullscreenViewer: React.FC<FullscreenViewerProps> = ({
           </button>
 
           <button
-            onClick={onOpenComment}
+            disabled={!canWrite} onClick={onOpenComment}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-dark-800 hover:bg-dark-700 text-blue-300 rounded border border-dark-600 transition-colors"
             title="Edit Comment (HotKey: Shift+Enter)"
           >

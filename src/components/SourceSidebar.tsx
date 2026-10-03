@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Folder,
   FolderOpen,
@@ -24,6 +25,7 @@ interface SourceSidebarProps {
   onOpenFolderPicker: () => void;
   onScan: () => void;
   onQuickViewChange: (view: 'all' | 'rated' | 'tagged') => void;
+  onSelectAll: () => void;
 }
 
 const getFolderName = (path: string) => {
@@ -45,7 +47,38 @@ export const SourceSidebar: React.FC<SourceSidebarProps> = ({
   onOpenFolderPicker,
   onScan,
   onQuickViewChange,
-}) => (
+  onSelectAll,
+}) => {
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const folderRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!contextMenu) return;
+    const menu = menuRef.current;
+    (menu?.querySelector<HTMLButtonElement>('button:enabled') || menu)?.focus();
+    const dismiss = () => setContextMenu(null);
+    const dismissOutside = (event: PointerEvent) => {
+      if (!menu?.contains(event.target as Node)) dismiss();
+    };
+    document.addEventListener('pointerdown', dismissOutside);
+    window.addEventListener('resize', dismiss);
+    window.addEventListener('scroll', dismiss, true);
+    return () => {
+      document.removeEventListener('pointerdown', dismissOutside);
+      window.removeEventListener('resize', dismiss);
+      window.removeEventListener('scroll', dismiss, true);
+    };
+  }, [contextMenu]);
+
+  useEffect(() => setContextMenu(null), [directoryPath]);
+
+  const closeMenu = () => {
+    setContextMenu(null);
+    folderRef.current?.focus();
+  };
+
+  return (
   <aside className="source-sidebar" aria-label="Gallery sources">
     <div className="sidebar-section">
       <h2>Library</h2>
@@ -80,7 +113,24 @@ export const SourceSidebar: React.FC<SourceSidebarProps> = ({
 
     <div className="sidebar-section">
       <h2>Folder</h2>
-      <button className="folder-source" onClick={onOpenFolderPicker} type="button">
+      <button
+        ref={folderRef}
+        className="folder-source"
+        onClick={onOpenFolderPicker}
+        onContextMenu={(event) => {
+          event.preventDefault();
+          const bounds = event.currentTarget.getBoundingClientRect();
+          const x = event.clientX || bounds.left;
+          const y = event.clientY || bounds.bottom;
+          setContextMenu({
+            x: Math.max(8, Math.min(x, window.innerWidth - 188)),
+            y: Math.max(8, Math.min(y, window.innerHeight - 52)),
+          });
+        }}
+        aria-haspopup="menu"
+        aria-expanded={contextMenu !== null}
+        type="button"
+      >
         <span className="folder-source-icon"><Folder aria-hidden="true" /></span>
         <span className="folder-source-copy">
           <strong>{getFolderName(directoryPath)}</strong>
@@ -111,5 +161,45 @@ export const SourceSidebar: React.FC<SourceSidebarProps> = ({
         {isScanning ? 'Scanning…' : 'Rescan folder'}
       </button>
     </div>
+    {contextMenu && createPortal(
+      <div
+        ref={menuRef}
+        className="folder-context-menu"
+        role="menu"
+        aria-label="Folder actions"
+        tabIndex={-1}
+        style={{ left: contextMenu.x, top: contextMenu.y }}
+        onContextMenu={(event) => event.preventDefault()}
+        onBlur={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setContextMenu(null);
+        }}
+        onKeyDown={(event) => {
+          event.stopPropagation();
+          if (event.key === 'Escape') {
+            event.preventDefault();
+            closeMenu();
+          } else if (event.key === 'Tab') {
+            event.preventDefault();
+            closeMenu();
+          } else if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+            event.preventDefault();
+          }
+        }}
+      >
+        <button
+          role="menuitem"
+          type="button"
+          disabled={isScanning || filteredCount === 0}
+          onClick={() => {
+            onSelectAll();
+            closeMenu();
+          }}
+        >
+          Select All
+        </button>
+      </div>,
+      document.body
+    )}
   </aside>
-);
+  );
+};
