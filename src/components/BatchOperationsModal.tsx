@@ -1,5 +1,5 @@
 import { useAccess } from '../security/AccessProvider';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ImageItem, BatchAction, BatchResult } from '../types/gallery';
 import { sendBatchRequest } from '../services/api';
 import { FolderPickerModal } from './FolderPickerModal';
@@ -43,6 +43,7 @@ export const BatchOperationsModal: React.FC<BatchOperationsModalProps> = ({
 
   const [loading, setLoading] = useState<boolean>(false);
   const [result, setResult] = useState<BatchResult | null>(null);
+  const [lastCopiedRequest, setLastCopiedRequest] = useState<string | null>(null);
   const dialogRef = useDialogFocus<HTMLDivElement>(isOpen && !isFolderPickerOpen);
 
   useEffect(() => {
@@ -62,9 +63,14 @@ export const BatchOperationsModal: React.FC<BatchOperationsModalProps> = ({
     // Initialize the scope when opening, preserving an explicit choice while open.
   }, [isOpen]);
 
-  if (!isOpen) return null;
-
   const targetList = scope === 'selected' ? selectedImages : filteredImages;
+  const copyRequestKey = useMemo(
+    () => JSON.stringify([targetDirectory, targetList.map((image) => image.path).sort()]),
+    [targetDirectory, targetList]
+  );
+  const copyAlreadyCompleted = action === 'copy' && lastCopiedRequest === copyRequestKey;
+
+  if (!isOpen) return null;
 
   const handleExecute = async () => {
     if (targetList.length === 0) return;
@@ -83,6 +89,7 @@ export const BatchOperationsModal: React.FC<BatchOperationsModalProps> = ({
 
       setResult(res);
       if (res.success) {
+        if (action === 'copy') setLastCopiedRequest(copyRequestKey);
         onSuccess(res);
       }
     } catch (err: any) {
@@ -320,7 +327,7 @@ export const BatchOperationsModal: React.FC<BatchOperationsModalProps> = ({
               </button>
               <button
                 type="button"
-                disabled={loading || targetList.length === 0}
+                disabled={loading || targetList.length === 0 || copyAlreadyCompleted}
                 onClick={handleExecute}
                 className={`px-5 py-2 text-white text-xs font-semibold rounded-lg shadow-lg transition-colors flex items-center gap-2 ${
                   action === 'delete'
