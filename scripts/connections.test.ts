@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { connectionInfo } from '../server/security/connections.js';
+import { connectionInfo, lanHosts } from '../server/security/connections.js';
 import type { NetworkSettings } from '../server/security/store.js';
 import type { NetworkInterfaceInfo } from 'node:os';
 const entry = (address: string, family: 'IPv4' | 'IPv6', internal = false): NetworkInterfaceInfo => ({ address, family, internal, netmask: '', mac: '', cidr: null, ...(family === 'IPv6' ? { scopeid: 0 } : {}) }) as NetworkInterfaceInfo;
@@ -11,4 +11,7 @@ test('connection addresses include actual protocol and port, bracket IPv6, and e
   assert.deepEqual(connectionInfo({ ...settings, lanPassword: false }, interfaces, 3002).lan, ['http://192.168.1.20:3002', 'http://[fd12::20]:3002']);
   assert.deepEqual(connectionInfo({ ...settings, lanEnabled: false, internetEnabled: false }, interfaces), { lan: [], internet: null });
   assert.deepEqual(connectionInfo(settings, {}, 3002).lan, []);
+});
+test('LAN hosts are listed even while LAN access is disabled', () => {
+  assert.deepEqual(lanHosts(interfaces, 3002), ['192.168.1.20:3002', '[fd12::20]:3002']);
 });

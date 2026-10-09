@@ -24,7 +24,7 @@ test('actual listeners enforce TLS, roles, origin checks, and dynamic enable/dis
   const image = path.join(root, 'image.png'); fs.writeFileSync(image, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', 'base64'));
   const child = spawn(process.execPath, ['--import', 'tsx', 'server/index.ts'], {
     cwd: process.cwd(), stdio: ['ignore', 'pipe', 'pipe'],
-    env: { ...process.env, PORT: String(localPort), GENERY_LAN_PORT: String(lanPort), GENERY_INTERNET_PORT: String(publicPort), GENERY_ACCESS_PATH: path.join(temporary, 'access.json'), GENERY_AI_HOME: path.join(temporary, 'ai'), GENERY_METADATA_PATH: path.join(temporary, 'metadata.json'), GENERY_TLS_CERT: certFile, GENERY_TLS_KEY: keyFile },
+    env: { ...process.env, PORT: String(localPort), GENERY_LAN_PORT: String(lanPort), GENERY_INTERNET_PORT: String(publicPort), GENERY_ACCESS_PATH: path.join(temporary, 'access.json'), GENERY_AI_HOME: path.join(temporary, 'ai'), GENERY_METADATA_PATH: path.join(temporary, 'metadata.json'), GENERY_LAST_FOLDERS_PATH: path.join(temporary, 'last-folders.json'), GENERY_TLS_CERT: certFile, GENERY_TLS_KEY: keyFile },
   });
   let diagnostics = ''; child.stderr.on('data', data => { diagnostics += data.toString(); });
   async function request(base: string, endpoint: string, method = 'GET', body?: unknown, cookie?: string, overrides: Record<string, string> = {}) {

@@ -15,6 +15,7 @@ import { authorizePath, type Principal } from '../server/security/paths.js';
 const temporary = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'genery-security-')));
 process.env.GENERY_AI_HOME = path.join(temporary, 'ai');
 process.env.GENERY_METADATA_PATH = path.join(temporary, 'metadata.json');
+process.env.GENERY_LAST_FOLDERS_PATH = path.join(temporary, 'last-folders.json');
 const { createApp } = await import('../server/app.js');
 const root = path.join(temporary, 'allowed');
 const other = path.join(temporary, 'allowed-other');

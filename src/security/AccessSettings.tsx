@@ -51,6 +51,7 @@ export function AccessSettings() {
   const session = useAccess();
   const [settings, setSettings] = useState<NetworkSettings | null>(null);
   const [connections, setConnections] = useState<Connections>({ lan: [], internet: null });
+  const [lanHosts, setLanHosts] = useState<string[]>([]);
   const [tlsConfigured, setTLSConfigured] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [error, setError] = useState('');
@@ -63,7 +64,7 @@ export function AccessSettings() {
   const [grants, setGrants] = useState<Grant[]>([{ path: '', recursive: false }]);
   async function load() {
     const work = [];
-    if (session.canManageNetwork) work.push(accessRequest('settings').then(data => { setSettings(data.settings); setConnections(data.connections); setTLSConfigured(data.tlsConfigured); }));
+    if (session.canManageNetwork) work.push(accessRequest('settings').then(data => { setSettings(data.settings); setConnections(data.connections); setLanHosts(data.lanHosts || []); setTLSConfigured(data.tlsConfigured); }));
     if (session.canManageUsers) work.push(accessRequest('users').then(data => setUsers(data.users)));
     await Promise.all(work);
   }
@@ -80,14 +81,14 @@ export function AccessSettings() {
     <p>Signed in as <strong>{session.user.username}</strong> · {session.user.role}. {session.channel === 'local' ? 'Local machine' : session.channel === 'lan' ? 'Local network' : 'Internet'} connection.</p>
     {session.user.id !== 'local-owner' && session.user.id !== 'lan-guest' && <button className="toolbar-button" type="button" disabled={busy} onClick={() => void run(async () => { await accessRequest('logout', 'POST', {}); window.dispatchEvent(new Event('genery-session-expired')); })}>Sign out</button>}
     {!session.canManageNetwork && <ConnectionAddresses addresses={[...session.connections.lan, ...(session.connections.internet ? [session.connections.internet] : [])]} />}
-    {session.canManageNetwork && settings && <form className="access-form access-section" onSubmit={event => { event.preventDefault(); void run(async () => { const data = await accessRequest('settings', 'POST', settings); setSettings(data.settings); setConnections(data.connections); setNotice('Network settings saved. Remote sessions have been signed out.'); }); }}>
+    {session.canManageNetwork && settings && <form className="access-form access-section" onSubmit={event => { event.preventDefault(); void run(async () => { const data = await accessRequest('settings', 'POST', settings); setSettings(data.settings); setConnections(data.connections); setLanHosts(data.lanHosts || []); setNotice('Network settings saved. Remote sessions have been signed out.'); }); }}>
       <fieldset disabled={busy}>
         <legend>Local network</legend>
         <label className="access-check"><input type="checkbox" checked={settings.lanEnabled} onChange={event => setSettings({ ...settings, lanEnabled: event.target.checked })} />Allow access on the local network</label>
         <label>Access mode<select value={settings.lanPassword ? 'password' : 'guest'} onChange={event => setSettings({ ...settings, lanPassword: event.target.value === 'password' })}><option value="password">Username and password (HTTPS)</option><option value="guest">No password</option></select></label>
         <p className="settings-hint">Share the connection address shown below. Disable LAN access and save before changing its access mode.</p>
-        {connections.lan.length > 0 && <ConnectionAddresses addresses={connections.lan} />}
-        {settings.lanEnabled && !connections.lan.length && <p className="settings-hint">{settings.lanEnabled ? 'Save to enable access. If access is already enabled, connect this machine to a local network to show its address.' : ''}</p>}
+        <ConnectionAddresses addresses={lanHosts.map(host => `${settings.lanPassword ? 'https' : 'http'}://${host}`)} emptyText="No local network address found. Connect this machine to a local network to show its address." />
+        {lanHosts.length > 0 && !connections.lan.length && <p className="settings-hint">These addresses work once local network access is enabled and saved.</p>}
         {!settings.lanPassword && <><label>Guest permissions<select value={settings.guestRole} onChange={event => setSettings({ ...settings, guestRole: event.target.value as NetworkSettings['guestRole'] })}><option value="normal">Read only</option><option value="moderator">Moderator (cannot delete files)</option></select></label><GrantEditor grants={settings.guestGrants} onChange={guestGrants => setSettings({ ...settings, guestGrants })} /></>}
       </fieldset>
       <fieldset disabled={busy}>

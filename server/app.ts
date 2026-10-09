@@ -7,6 +7,7 @@ import os from 'os';
 import sharp from 'sharp';
 import { scanDirectory } from './scanner.js';
 import { metadataStore, validateMetadataImport } from './metadataStore.js';
+import { getLastFolder, setLastFolder } from './lastFolders.js';
 import { executeBatchOperation } from './operations.js';
 import { openImage, streamImage } from './security/media.js';
 import { limited, WorkPool } from './security/work.js';
@@ -53,7 +54,10 @@ app.get('/api/scan', limited(scans, async (req, res) => {
   try {
     const rawDir = req.query.dir as string;
     const user = req.access.user!;
-    const dirPath = authorizePath(user, rawDir && rawDir.trim() ? resolveLocalPath(rawDir) : user.role === 'admin' ? getDefaultDir() : user.grants[0]?.path, 'directory');
+    const fallback = user.role === 'admin' ? getDefaultDir() : user.grants[0]?.path;
+    const remembered = getLastFolder(user.id);
+    const resumeDir = remembered && canAccess(user, remembered, 'directory') ? remembered : fallback;
+    const dirPath = authorizePath(user, rawDir && rawDir.trim() ? resolveLocalPath(rawDir) : resumeDir, 'directory');
     const subdirs = req.query.subdirs === 'true';
 
     if (!fs.existsSync(dirPath)) {
@@ -66,6 +70,7 @@ app.get('/api/scan', limited(scans, async (req, res) => {
     result.images = result.images.filter(image => canAccess(latest, image.path));
     result.totalFound = result.images.length;
     result.availableTypes = [...new Set(result.images.map(image => image.extension))].sort();
+    setLastFolder(latest.id, dirPath);
     res.json(result);
   } catch (err: any) {
     res.status(err instanceof AccessError ? err.status : 400).json({ error: err instanceof AccessError ? err.message : 'Could not scan directory.' });

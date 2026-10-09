@@ -11,6 +11,7 @@ import { openImage, streamImage } from '../server/security/media.js';
 const temporary = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'genery-streams-')));
 process.env.GENERY_AI_HOME = path.join(temporary, 'ai');
 process.env.GENERY_METADATA_PATH = path.join(temporary, 'metadata.json');
+process.env.GENERY_LAST_FOLDERS_PATH = path.join(temporary, 'last-folders.json');
 const { executeBatchOperation } = await import('../server/operations.js');
 const images = path.join(temporary, 'images'); fs.mkdirSync(images);
 const user: Principal = { id: 'moderator', username: 'moderator', role: 'moderator', grants: [{ path: images, recursive: true }] };

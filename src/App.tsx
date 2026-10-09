@@ -59,21 +59,11 @@ const DEFAULT_ADVANCED_GROUP: AdvancedFilterGroup = {
 const getErrorMessage = (error: unknown, fallback: string) =>
   error instanceof Error && error.message ? error.message : fallback;
 
-const LAST_FOLDER_KEY = 'genery.lastOpenedFolder';
-
-function readLastFolder(): string {
-  try {
-    return localStorage.getItem(LAST_FOLDER_KEY) || '';
-  } catch {
-    return '';
-  }
-}
-
 export default function App() {
   const access = useAccess();
   const [allImages, setAllImages] = useState<ImageItem[]>([]);
   const [availableTypes, setAvailableTypes] = useState<string[]>([]);
-  const [directoryPath, setDirectoryPath] = useState(() => access.user.role === 'admin' ? readLastFolder() : access.user.grants[0]?.path || '');
+  const [directoryPath, setDirectoryPath] = useState('');
   const scanRequest = useRef(0);
   const [completedScanVersion, setCompletedScanVersion] = useState(0);
   const [includeSubdirs, setIncludeSubdirs] = useState(true);
@@ -186,11 +176,6 @@ export default function App() {
       if (request !== scanRequest.current) return;
       setScannedDirectory(result.directory);
       setScannedSubdirs(includeSubdirs);
-      try {
-        localStorage.setItem(LAST_FOLDER_KEY, result.directory);
-      } catch {
-        // Browsing still works when browser storage is unavailable.
-      }
       setAllImages(result.images);
       setAvailableTypes(result.availableTypes);
       setDirectoryPath(result.directory);
@@ -212,7 +197,7 @@ export default function App() {
   useEffect(() => {
     void handleScan();
     return () => { scanRequest.current += 1; };
-    // Resume the last successful folder; a fresh browser uses the server default.
+    // An empty path resumes this account's last scanned folder on the server.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

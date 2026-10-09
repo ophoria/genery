@@ -3,7 +3,7 @@ import { randomBytes, createHash } from 'node:crypto';
 import net from 'node:net';
 import { isPrivatePeer } from './peers.js';
 export { isPrivatePeer } from './peers.js';
-import { connectionInfo } from './connections.js';
+import { connectionInfo, lanHosts } from './connections.js';
 import { AccessError, Principal, authorizePath, safeBasename } from './paths.js';
 import { SecurityStore, publicUser, NetworkSettings } from './store.js';
 
@@ -134,7 +134,7 @@ export class AccessControl {
       if (match && req.method === 'DELETE') { this.store.deleteUser(match[1]); this.revoke(); return res.json({ success: true }); }
       if (req.path === '/api/access/settings') {
         if (user.id !== owner.id || channel !== 'local') throw new AccessError('Change network settings from the local machine.');
-        if (req.method === 'GET') return res.json({ settings: this.store.settings(), connections: connectionInfo(this.store.settings()), tlsConfigured: Boolean(process.env.GENERY_TLS_CERT && process.env.GENERY_TLS_KEY) });
+        if (req.method === 'GET') return res.json({ settings: this.store.settings(), connections: connectionInfo(this.store.settings()), lanHosts: lanHosts(), tlsConfigured: Boolean(process.env.GENERY_TLS_CERT && process.env.GENERY_TLS_KEY) });
         if (req.method === 'POST') {
           if (this.settingsBusy) throw new AccessError('Network settings are being changed. Try again.', 409);
           this.settingsBusy = true;
@@ -144,7 +144,7 @@ export class AccessControl {
             try { this.store.saveSettings(settings); }
             catch (error) { await change?.rollback(); throw error; }
             change?.commit(); this.revoke();
-            return res.json({ settings, connections: connectionInfo(settings) });
+            return res.json({ settings, connections: connectionInfo(settings), lanHosts: lanHosts() });
           } finally { this.settingsBusy = false; }
         }
       }
